@@ -46,19 +46,23 @@
 const chatBox = document.getElementById('chat-body');
 const soundwave = document.getElementById('soundwave');
 const aiStatus = document.getElementById('ai-status');
-let recognition;
 
-function startRecognition() {
+let recognition;
+let isSpeaking = false;
+let shouldListen = true;
+
+function setupRecognition() {
     recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
     recognition.lang = 'en-US';
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    recognition.continuous = false;
 
-    recognition.start();
-    aiStatus.textContent = "Listening...";
+    recognition.onstart = () => {
+        aiStatus.textContent = "Listening...";
+    };
 
     recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
+        const transcript = event.results[0][0].transcript.trim();
         appendMessage(transcript, 'user');
 
         fetch("{% url 'ai_response' %}", {
@@ -76,12 +80,61 @@ function startRecognition() {
         });
     };
 
-    recognition.onerror = () => {
-        setTimeout(() => recognition.start(), 1000);
+    recognition.onerror = (event) => {
+        console.warn("Speech recognition error:", event.error);
+        if (shouldListen && !isSpeaking) restartRecognition();
     };
 
     recognition.onend = () => {
-        if (!window.speechSynthesis.speaking) recognition.start();
+        if (shouldListen && !isSpeaking) restartRecognition();
+    };
+}
+
+function startRecognition() {
+    if (!recognition) setupRecognition();
+    try {
+        recognition.start();
+    } catch (e) {
+        console.warn("Recognition start error:", e.message);
+    }
+}
+
+function stopRecognition() {
+    if (recognition) {
+        try {
+            recognition.stop();
+        } catch (e) {
+            console.warn("Recognition stop error:", e.message);
+        }
+    }
+}
+
+function restartRecognition(delay = 500) {
+    setTimeout(() => {
+        if (!isSpeaking && shouldListen) {
+            startRecognition();
+        }
+    }, delay);
+}
+
+function speak(text) {
+    stopRecognition();
+    isSpeaking = true;
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+
+    aiStatus.textContent = "AI is speaking...";
+    soundwave.style.animationPlayState = 'running';
+
+    synth.cancel(); // in case previous speech is still running
+    synth.speak(utterance);
+
+    utterance.onend = () => {
+        isSpeaking = false;
+        soundwave.style.animationPlayState = 'paused';
+        aiStatus.textContent = "Listening...";
+        restartRecognition(800);
     };
 }
 
@@ -95,24 +148,6 @@ function appendMessage(text, sender) {
         </span>`;
     chatBox.appendChild(msg);
     chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-
-function speak(text) {
-    recognition.abort();
-    const synth = window.speechSynthesis;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-
-    aiStatus.textContent = "AI is speaking...";
-    soundwave.style.animationPlayState = 'running';
-    synth.speak(utterance);
-
-    utterance.onend = () => {
-        aiStatus.textContent = "Listening...";
-        soundwave.style.animationPlayState = 'paused';
-        setTimeout(() => recognition.start(), 500);
-    };
 }
 
 function getCSRFToken() {
@@ -133,13 +168,13 @@ function startCallTimer() {
 
 window.onload = () => {
     soundwave.style.animationPlayState = 'paused';
+    shouldListen = true;
     setTimeout(() => {
-        soundwave.style.animationPlayState = 'running';
         startRecognition();
-    }, 500);
-
+    }, 1000);
     startCallTimer();
 };
 </script>
+
 
 {% endblock %}

@@ -17,10 +17,10 @@ SCRIPTED_RESPONSES = {
         "feeling human, respectful, and professionally trained in periodontal care."
     ),
     "what can you do": "I can assist with most periodontal inquiries, schedule appointments, and determine if your situation is urgent.",
-    "i have pain": "I'm sorry to hear that. Can you describe the pain more? I'll help assess how urgent it is.",
+    "i have bleeding.": "I'm sorry to hear that. Can you describe the pain more? I'll help assess how urgent it is.",
     "this is urgent": "Thank you for letting me know. I'm escalating your case to our on-call staff immediately.",
     "bleeding": "Post-surgical bleeding can be common. Is the bleeding continuous or has it slowed down?",
-    "continuous bleeding": "Understood. Since it's ongoing, I’m escalating this case to our emergency team now.",
+    "Continuous bleeding": "Understood. Since it's ongoing, I’m escalating this case to our emergency team now.",
     "bye": "Goodbye! Feel free to reach out anytime. Take care of your oral health."
 }
 
@@ -28,7 +28,7 @@ SCRIPTED_RESPONSES = {
 def ai_response(request):
     if request.method == 'POST':
         data = json.loads(request.body)
-        user_input = data.get('message', '').strip().lower()
+        user_input = data.get('message', '').strip().lower() or data.get('transcript', '').strip().lower()
 
         # Basic matching
         for key in SCRIPTED_RESPONSES:
