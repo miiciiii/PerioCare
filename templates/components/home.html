@@ -1,0 +1,52 @@
+{% extends "base/index.html" %}
+{% load static %}
+
+{% block title %}PerioCare AI - Home{% endblock %}
+
+{% block content %}
+<div class="bg-light rounded p-5 shadow-sm">
+  <div class="row align-items-center">
+    <div class="col-md-6 text-center text-md-start mb-4 mb-md-0">
+      <h1 class="display-5 fw-bold text-primary">Welcome to PerioCare AI</h1>
+      <p class="lead text-muted">24/7 post-surgery support from your virtual periodontal assistant.</p>
+      <p class="text-muted">Our AI helps patients receive personalized care outside clinical hours through intelligent voice-based consultation and documentation.</p>
+      <a href="{% url 'call' %}" class="btn btn-primary btn-lg mt-3">Speak with Your AI Assistant</a>
+    </div>
+    <div class="col-md-6 text-center">
+      <img src="{% static 'images/ai-assistant-avatar.png' %}"
+          alt="AI Assistant"
+          class="img-fluid rounded shadow"
+          style="max-height: 300px;">
+    </div>
+
+
+  </div>
+</div>
+
+<div class="row mt-5 g-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h5 class="card-title text-primary">Smart Call Handling</h5>
+        <p class="card-text text-muted">Our AI agent holds a warm and intelligent conversation to assess the patient's symptoms and urgency level.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h5 class="card-title text-primary">24/7 Availability</h5>
+        <p class="card-text text-muted">Patients can reach your practice after hours — no missed concerns, no delayed care.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h5 class="card-title text-primary">Auto Documentation</h5>
+        <p class="card-text text-muted">Every call is summarized and sent to your team for morning follow-up and continuity of care.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

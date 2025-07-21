@@ -1,0 +1,231 @@
+/* === 🌐 Base Layout & Global Styles === */
+body {
+  background-color: #eef3f8;
+  color: #333;
+  font-family: 'Segoe UI', 'Inter', sans-serif;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 600;
+  color: #222;
+}
+
+.container {
+  max-width: 850px;
+}
+
+/* === 📦 Card & Box Styling === */
+.card {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  background-color: white;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* === 🟦 Button Styling === */
+.btn-primary {
+  background-color: #0d6efd;
+  border: none;
+  border-radius: 10px;
+}
+
+.btn-outline-secondary,
+.btn-outline-light,
+.btn-danger {
+  border-radius: 10px;
+}
+
+/* === 💬 Chat Bubble Styles === */
+.badge {
+  font-size: 1rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 20px;
+}
+
+.bg-primary {
+  background-color: #0d6efd !important;
+  color: #fff;
+}
+
+.bg-success {
+  background-color: #198754 !important;
+  color: #fff;
+}
+
+/* === 📞 Call Page: Soundwave Animation === */
+.soundwave {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 30px;
+}
+
+.soundwave span.ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60px;
+  height: 60px;
+  border: 2px solid #0dcaf0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulseRing 1.5s infinite ease-out;
+  box-shadow: 0 0 10px rgba(13, 202, 240, 0.6);
+}
+
+.soundwave span.ring:nth-child(2) {
+  animation-delay: 0.5s;
+  width: 80px;
+  height: 80px;
+  border-color: #6610f2;
+  box-shadow: 0 0 10px rgba(102, 16, 242, 0.5);
+}
+
+.soundwave span.ring:nth-child(3) {
+  animation-delay: 1s;
+  width: 100px;
+  height: 100px;
+  border-color: #6f42c1;
+  box-shadow: 0 0 12px rgba(111, 66, 193, 0.4);
+}
+
+@keyframes pulseRing {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.8);
+    opacity: 0;
+  }
+}
+
+/* Central frequency spikes */
+.spike-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  gap: 2px;
+  transform: translate(-50%, -50%);
+  height: 40px;
+  align-items: center;
+}
+
+.spike {
+  width: 3px;
+  background: #0dcaf0;
+  animation: spikeAnim 1s infinite ease-in-out;
+  border-radius: 1px;
+}
+
+.spike:nth-child(1) { animation-delay: 0s; height: 10px; }
+.spike:nth-child(2) { animation-delay: 0.1s; height: 20px; }
+.spike:nth-child(3) { animation-delay: 0.2s; height: 30px; }
+.spike:nth-child(4) { animation-delay: 0.3s; height: 20px; }
+.spike:nth-child(5) { animation-delay: 0.4s; height: 10px; }
+
+@keyframes spikeAnim {
+  0%, 100% {
+    transform: scaleY(0.5);
+    background-color: #0dcaf0;
+  }
+  50% {
+    transform: scaleY(1.8);
+    background-color: #6f42c1;
+  }
+}
+
+
+.call-header {
+  background-color: #0d6efd;
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.soundwave-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+/* === 🎙️ AI Call Status Indicator === */
+#aiStatus {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #0d6efd;
+}
+
+/* === 💬 Chat Log Box (shared by chat & call) === */
+#chatBox {
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  padding: 1rem;
+  height: 45vh;
+  overflow-y: auto;
+}
+
+/* === 📝 Forms & Inputs === */
+input[type="text"],
+textarea {
+  border-radius: 10px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  width: 100%;
+}
+
+form button {
+  margin-left: 0.5rem;
+}
+
+/* === 📱 Utility & Helper Classes === */
+.text-light {
+  color: #adb5bd !important;
+}
+
+a {
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* === 📱 Responsive Adjustments === */
+@media (max-width: 576px) {
+  .soundwave {
+    width: 100px;
+    height: 100px;
+  }
+
+  .badge {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.7rem;
+  }
+
+  h4 {
+    font-size: 1.2rem;
+  }
+}
+
+/* === 🔚 Sticky Footer === */
+footer {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #666;
+  border-top: 1px solid #dee2e6;
+  margin-top: auto;
+}

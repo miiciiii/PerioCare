@@ -1,0 +1,145 @@
+{% extends 'base/index.html' %}
+
+{% block content %}
+
+<div class="container py-5 text-center text-dark">
+  <!-- Call Header -->
+  <h4 class="mb-2">On Call with <span class="text-info">AI Assistant</span></h4>
+  <small id="call-timer" class="mb-4 d-block text-muted">Call Duration: 00:00</small>
+
+  <!-- Soundwave Animation -->
+  <div class="soundwave" id="soundwave">
+    <!-- Pulsing Rings -->
+    <span class="ring"></span>
+    <span class="ring"></span>
+    <span class="ring"></span>
+
+    <!-- Central Spikes -->
+    <div class="spike-container">
+      <div class="spike"></div>
+      <div class="spike"></div>
+      <div class="spike"></div>
+      <div class="spike"></div>
+      <div class="spike"></div>
+    </div>
+  </div>
+
+  <div id="ai-status" class="text-info mb-4">Listening...</div>
+
+    <!-- Chat Display -->
+    <div id="chat-container" class="bg-white text-dark rounded shadow-sm p-3 mx-auto mb-4"
+        style="max-width: 600px; height: 250px; overflow-y: auto;">
+    <div id="chat-body" class="d-flex flex-column gap-2"></div>
+    </div>
+
+
+  <!-- Chat Mode Button -->
+  <a href="{% url 'chat' %}" class="btn btn-outline-dark">Switch to Chat Mode</a>
+  
+    <!-- Finish Button -->
+  <div class="text-center mt-4">
+    <a href="{% url 'response' %}" class="btn btn-outline-dark">Finish Call</a>
+  </div>
+</div>
+
+<script>
+const chatBox = document.getElementById('chat-body');
+const soundwave = document.getElementById('soundwave');
+const aiStatus = document.getElementById('ai-status');
+let recognition;
+
+function startRecognition() {
+    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.start();
+    aiStatus.textContent = "Listening...";
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        appendMessage(transcript, 'user');
+
+        fetch("{% url 'ai_response' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getCSRFToken(),
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ transcript })
+        })
+        .then(response => response.json())
+        .then(data => {
+            appendMessage(data.reply, 'ai');
+            speak(data.reply);
+        });
+    };
+
+    recognition.onerror = () => {
+        setTimeout(() => recognition.start(), 1000);
+    };
+
+    recognition.onend = () => {
+        if (!window.speechSynthesis.speaking) recognition.start();
+    };
+}
+
+function appendMessage(text, sender) {
+    const msg = document.createElement('div');
+    msg.className = `d-flex ${sender === 'user' ? 'justify-content-end' : 'justify-content-start'}`;
+    msg.innerHTML = `
+        <span class="badge ${sender === 'user' ? 'bg-primary' : 'bg-success'} text-wrap text-start"
+              style="max-width: 80%; white-space: normal;">
+            ${sender === 'user' ? 'You' : 'AI'}: ${text}
+        </span>`;
+    chatBox.appendChild(msg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+
+function speak(text) {
+    recognition.abort();
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+
+    aiStatus.textContent = "AI is speaking...";
+    soundwave.style.animationPlayState = 'running';
+    synth.speak(utterance);
+
+    utterance.onend = () => {
+        aiStatus.textContent = "Listening...";
+        soundwave.style.animationPlayState = 'paused';
+        setTimeout(() => recognition.start(), 500);
+    };
+}
+
+function getCSRFToken() {
+    const name = 'csrftoken';
+    return document.cookie.split('; ').find(row => row.startsWith(name + '='))?.split('=')[1];
+}
+
+function startCallTimer() {
+    const timerElement = document.getElementById("call-timer");
+    let seconds = 0;
+    setInterval(() => {
+        seconds++;
+        const mins = String(Math.floor(seconds / 60)).padStart(2, '0');
+        const secs = String(seconds % 60).padStart(2, '0');
+        timerElement.textContent = `Call Duration: ${mins}:${secs}`;
+    }, 1000);
+}
+
+window.onload = () => {
+    soundwave.style.animationPlayState = 'paused';
+    setTimeout(() => {
+        soundwave.style.animationPlayState = 'running';
+        startRecognition();
+    }, 500);
+
+    startCallTimer();
+};
+</script>
+
+{% endblock %}

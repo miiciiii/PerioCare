@@ -1,0 +1,26 @@
+{% extends "base/index.html" %}
+{% load static %}
+
+{% block title %}Response - PerioCare AI{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Section Header -->
+    <h2 class="text-primary mb-4 text-center">AI Recommendation</h2>
+
+    <!-- Recommendation Message -->
+    <div class="alert alert-success shadow-sm rounded">
+        <strong>Preliminary Result:</strong> Based on your answers, your symptoms appear to be mild.  
+        Please apply gentle pressure to the area and contact the office tomorrow if it continues.
+    </div>
+
+    <p class="text-muted text-center">
+        If symptoms worsen, we will connect you to the on-call doctor immediately.
+    </p>
+
+    <!-- Action Button -->
+    <div class="text-center mt-4">
+        <a href="{% url 'summary' %}" class="btn btn-primary btn-lg">Next: View Summary</a>
+    </div>
+</div>
+{% endblock %}

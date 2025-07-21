@@ -1,0 +1,53 @@
+{% extends "base/index.html" %}
+{% load static %}
+
+{% block title %}Call Log - PerioCare AI{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Page Header -->
+    <h2 class="text-primary text-center mb-4">Call Log</h2>
+
+    <!-- Call Log Table -->
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Call ID</th>
+                    <th scope="col">Patient Name</th>
+                    <th scope="col">Date/Time</th>
+                    <th scope="col">Concern</th>
+                    <th scope="col">Severity</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>001</td>
+                    <td>John Doe</td>
+                    <td>2025-07-15 23:30</td>
+                    <td>Post-surgical bleeding</td>
+                    <td><span class="badge bg-success">Mild</span></td>
+                    <td><span class="text-success">Resolved</span></td>
+                    <td><a href="{% url 'summary' %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                </tr>
+                <tr>
+                    <td>002</td>
+                    <td>Jane Smith</td>
+                    <td>2025-07-14 22:45</td>
+                    <td>Pain after extraction</td>
+                    <td><span class="badge bg-warning text-dark">Moderate</span></td>
+                    <td><span class="text-danger">Escalated</span></td>
+                    <td><a href="{% url 'summary' %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Navigation -->
+    <div class="text-center mt-4">
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary">Back to Home</a>
+    </div>
+</div>
+{% endblock %}

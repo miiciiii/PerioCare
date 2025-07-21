@@ -1,0 +1,26 @@
+{% extends "base/index.html" %}
+{% load static %}
+
+{% block title %}Summary - PerioCare AI{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <h2 class="text-primary mb-4 text-center">Conversation Summary</h2>
+
+    <!-- Summary Details -->
+    <div class="card shadow-sm rounded">
+        <div class="card-body">
+            <p class="mb-3"><strong>Patient Concern:</strong> Having bleeding after surgery.</p>
+            <p class="mb-3"><strong>Severity:</strong> Mild</p>
+            <p class="mb-3"><strong>Duration:</strong> About 30 minutes</p>
+            <p class="mb-0"><strong>AI Recommendation:</strong> Apply gentle pressure. Follow up tomorrow unless symptoms worsen.</p>
+        </div>
+    </div>
+
+    <!-- Return Button -->
+    <div class="text-center mt-4">
+        <a href="{% url 'home' %}" class="btn btn-outline-primary">Back to Home</a>
+    </div>
+</div>
+{% endblock %}
