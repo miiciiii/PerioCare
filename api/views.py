@@ -8,11 +8,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+print("OPENAI_API_KEY loaded:", os.getenv("API_KEY"))
+
 from openai import OpenAI
 
 client = OpenAI(
     base_url="https://models.github.ai/inference",
-    api_key=os.getenv("OPENAI_API_KEY")
+    # api_key=os.getenv("OPENAI_API_KEY")
+    api_key=os.getenv("API_KEY")
 )
 
 @csrf_exempt
