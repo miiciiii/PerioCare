@@ -1,28 +1,14 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+
 
 import json
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
-# This is a simple AI assistant for PerioCare, handling basic dental inquiries and responses.
-SCRIPTED_RESPONSES = {
-    "hello": "Hello! Welcome to PerioCare AI Assistant — your trusted dental intelligence companion.",
-    "introduce yourself": (
-        "Introducing PerioCare AI Assistant:\n"
-        "- 🦷 Dental Intelligence: Understands periodontal-specific terminology and accurately assesses urgency levels.\n"
-        "- 🤖 Autonomous Care: Handles 90% of patient needs automatically without human intervention.\n"
-        "- 🚨 Smart Escalation: Escalates only genuinely urgent situations to on-call staff.\n\n"
-        "Our AI-powered voice assistant answers every call with the perfect balance of efficiency and empathy, "
-        "feeling human, respectful, and professionally trained in periodontal care."
-    ),
-    "what can you do": "I can assist with most periodontal inquiries, schedule appointments, and determine if your situation is urgent.",
-    "i have bleeding.": "I'm sorry to hear that. Can you describe the pain more? I'll help assess how urgent it is.",
-    "this is urgent": "Thank you for letting me know. I'm escalating your case to our on-call staff immediately.",
-    "bleeding": "Post-surgical bleeding can be common. Is the bleeding continuous or has it slowed down?",
-    "Continuous bleeding": "Understood. Since it's ongoing, I’m escalating this case to our emergency team now.",
-    "bye": "Goodbye! Feel free to reach out anytime. Take care of your oral health."
-}
+from .models import CallLog, Assessment
+
+
 
 @csrf_exempt
 def ai_response(request):
@@ -67,28 +53,25 @@ def call(request):
     
 @login_required
 def assessment(request):
-    if request.method == "POST":
-        severity = request.POST.get("severity")
-        duration = request.POST.get("duration")
-        symptoms = request.POST.get("symptoms")
 
-        # Fake logic for demonstration
-        if severity == "severe":
-            return redirect('response') + "?urgent=true"
-        else:
-            return redirect('response')
-    return render(request, 'components/assessment.html')
+    call_logs = CallLog.objects.all().prefetch_related('assessment').order_by('-call_time')
+
+
+
+    return render(request, 'components/assessment.html', {"call_logs": call_logs})
 
 def response(request):
     urgent = request.GET.get("urgent") == "true"
     return render(request, 'components/response.html', {"urgent": urgent})
 
-def summary(request):
-    # Dummy data for demo
-    summary_data = {
-        "patient_name": "John Doe",
-        "concern": "Post-surgical bleeding",
-        "assessment": "Mild bleeding for 30 minutes",
-        "recommendation": "Apply gentle pressure and observe",
+def summary(request, call_id):
+    logs = get_object_or_404(CallLog, call_id=call_id)
+
+    assessment = getattr(logs, 'assessment', None)
+
+    summary = {
+        "concern": assessment.concern,
+        "severity": assessment.severity,
     }
-    return render(request, 'components/summary.html', {"summary": summary_data})
+
+    return render(request, 'components/summary.html', {"summary": summary})

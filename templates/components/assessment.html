@@ -14,34 +14,49 @@
             <thead class="table-light">
                 <tr>
                     <th scope="col">Call ID</th>
-                    <th scope="col">Patient Name</th>
-                    <th scope="col">Date/Time</th>
+                    <th scope="col">Caller Name</th>
+                    <th scope="col">Call Time</th>
+                    <th scope="col">Caller Number</th>
                     <th scope="col">Concern</th>
                     <th scope="col">Severity</th>
                     <th scope="col">Status</th>
                     <th scope="col">Details</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td>001</td>
-                    <td>John Doe</td>
-                    <td>2025-07-15 23:30</td>
-                    <td>Post-surgical bleeding</td>
-                    <td><span class="badge bg-success">Mild</span></td>
-                    <td><span class="text-success">Resolved</span></td>
-                    <td><a href="{% url 'summary' %}" class="btn btn-sm btn-outline-primary">View</a></td>
-                </tr>
-                <tr>
-                    <td>002</td>
-                    <td>Jane Smith</td>
-                    <td>2025-07-14 22:45</td>
-                    <td>Pain after extraction</td>
-                    <td><span class="badge bg-warning text-dark">Moderate</span></td>
-                    <td><span class="text-danger">Escalated</span></td>
-                    <td><a href="{% url 'summary' %}" class="btn btn-sm btn-outline-primary">View</a></td>
-                </tr>
-            </tbody>
+                <tbody>
+                    {% for log in call_logs %}
+                    <tr>
+                        <td>{{ log.call_id }}</td>
+                        <td>{{ log.caller_name }}</td>
+                        <td>{{ log.call_time }}</td>
+                        <td>{{ log.caller_number }}</td>
+                        <td>{{ log.assessment.concern }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if log.assessment.severity == 'Mild' %}bg-success
+                                {% elif log.assessment.severity == 'Moderate' %}bg-warning text-dark
+                                {% else %}bg-danger
+                                {% endif %}">
+                                {{ log.assessment.severity }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="{% if log.assessment.status == 'Resolved' %}text-success
+                                        {% elif log.assessment.status == 'Escalated' %}text-danger
+                                        {% elif log.assessment.status == 'Pending' %}text-warning
+                                        {% elif log.assessment.status == 'In Progress' %}text-info
+                                        {% elif log.assessment.status == 'Cancelled' %}text-secondary
+                                        {% else %}text-muted
+                                        {% endif %}">
+                                {{ log.assessment.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'summary' call_id=log.call_id %}" class="btn btn-sm btn-outline-primary">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
         </table>
     </div>
 
