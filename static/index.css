@@ -175,6 +175,12 @@ h1, h2, h3, h4 {
   overflow-y: auto;
 }
 
+#chatBox .badge {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+
 /* === 📝 Forms & Inputs === */
 input[type="text"],
 textarea {

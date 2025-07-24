@@ -18,9 +18,6 @@ urlpatterns = [
     path('chat/', views.chat, name='chat'),
     path('assessment/', views.assessment, name='assessment'),
     path('response/', views.response, name='response'),
-    path('summary/', views.summary, name='summary'),
+    path('summary/<int:call_id>/', views.summary, name='summary'),
 
-    # AI response endpoint
-
-    path('ai_response/', views.ai_response, name='ai_response'),
     ]

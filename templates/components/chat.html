@@ -10,10 +10,13 @@
 
   <!-- Chat Box -->
   <div class="card shadow-sm border-0">
-    <div class="card-body bg-light rounded" id="chatBox" style="height: 350px; overflow-y: auto;">
+    <div class="card-body bg-light rounded" id="chatBox"
+         style="height: 500px; overflow-y: auto; overflow-wrap: break-word; word-break: break-word;">
       {% if initial_message %}
-      <div class="text-start mb-2">
-        <span class="badge bg-success">AI: {{ initial_message }}</span>
+      <div class="d-flex mb-2">
+        <div class="bg-success text-white p-2 rounded rounded-start text-break" style="white-space: pre-wrap; max-width: 75%;">
+          AI: {{ initial_message }}
+        </div>
       </div>
       {% else %}
       <div class="text-muted text-center">Conversation started…</div>
@@ -45,6 +48,7 @@
   </div>
 </div>
 
+<!-- JS -->
 <script>
 const chatBox = document.getElementById('chatBox');
 const userInput = document.getElementById('userInput');
@@ -53,66 +57,80 @@ const chatForm = document.getElementById('chatForm');
 
 // 🎤 SPEECH-TO-TEXT
 micButton.addEventListener('click', () => {
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
 
-    recognition.start();
+  recognition.start();
 
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        userInput.value = transcript;
-    };
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    userInput.value = transcript;
+  };
 
-    recognition.onerror = (event) => {
-        alert('Speech recognition error: ' + event.error);
-    };
+  recognition.onerror = (event) => {
+    alert('Speech recognition error: ' + event.error);
+  };
 });
 
 // 📨 FORM SUBMIT
-chatForm.addEventListener('submit', function(e) {
-    e.preventDefault();
+chatForm.addEventListener('submit', function (e) {
+  e.preventDefault();
 
-    const message = userInput.value.trim();
-    if (!message) return;
+  const message = userInput.value.trim();
+  if (!message) return;
 
-    // Append user's message
-    const userMsg = document.createElement('div');
-    userMsg.className = 'text-end mb-2';
-    userMsg.innerHTML = `<span class="badge bg-primary">${message}</span>`;
-    chatBox.appendChild(userMsg);
+  // Append user's message (right side)
+  const userMsg = document.createElement('div');
+  userMsg.className = 'd-flex justify-content-end mb-2';
+  userMsg.innerHTML = `
+    <div class="bg-primary text-white p-2 rounded rounded-end text-break" style="white-space: pre-wrap; max-width: 75%;">
+      ${message}
+    </div>`;
+  chatBox.appendChild(userMsg);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  userInput.value = '';
+
+  // Send to unified AI endpoint
+  fetch("{% url 'openai_api' %}", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": "{{ csrf_token }}",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messages: [
+        { role: "user", content: message }
+      ]
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    const aiText = data.response || "AI did not respond.";
+
+    // Append AI message (left side)
+    const aiMsg = document.createElement('div');
+    aiMsg.className = 'd-flex align-items-start mb-2 w-100';
+    aiMsg.innerHTML = `
+      <div class="bg-success text-white p-2 rounded rounded-start text-break"
+          style="white-space: pre-wrap; max-width: 75%; text-align: left;">
+        AI: ${aiText}
+      </div>`;
+    chatBox.appendChild(aiMsg);
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    userInput.value = '';
+    // 🔊 Text-to-speech
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(aiText);
+    utterance.lang = 'en-US';
+    synth.speak(utterance);
+  })
+  .catch(error => {
+    console.error("Fetch error:", error);
+  });
 
-    // Send to unified AI endpoint
-    fetch("{% url 'ai_response' %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}",
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message })
-    })
-    .then(response => response.json())
-    .then(data => {
-        const aiText = data.reply || "AI did not respond.";
-
-        // Append AI message
-        const aiMsg = document.createElement('div');
-        aiMsg.className = 'text-start mb-2';
-        aiMsg.innerHTML = `<span class="badge bg-success">AI: ${aiText}</span>`;
-        chatBox.appendChild(aiMsg);
-        chatBox.scrollTop = chatBox.scrollHeight;
-
-        // 🔊 Text-to-speech
-        const synth = window.speechSynthesis;
-        const utterance = new SpeechSynthesisUtterance(aiText);
-        utterance.lang = 'en-US';
-        synth.speak(utterance);
-    });
 });
 </script>
-
 {% endblock %}

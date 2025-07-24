@@ -11,16 +11,15 @@
     <!-- Summary Details -->
     <div class="card shadow-sm rounded">
         <div class="card-body">
-            <p class="mb-3"><strong>Patient Concern:</strong> Having bleeding after surgery.</p>
-            <p class="mb-3"><strong>Severity:</strong> Mild</p>
-            <p class="mb-3"><strong>Duration:</strong> About 30 minutes</p>
+            <p class="mb-3"><strong>Patient Concern:</strong> {{ summary.concern }}</p>
+            <p class="mb-3"><strong>Severity:</strong> {{ summary.severity }}</p>
             <p class="mb-0"><strong>AI Recommendation:</strong> Apply gentle pressure. Follow up tomorrow unless symptoms worsen.</p>
         </div>
     </div>
 
     <!-- Return Button -->
     <div class="text-center mt-4">
-        <a href="{% url 'home' %}" class="btn btn-outline-primary">Back to Home</a>
+        <a href="{% url 'assessment' %}" class="btn btn-outline-primary">Back to Assessment</a>
     </div>
 </div>
 {% endblock %}
