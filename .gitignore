@@ -6,3 +6,5 @@
 
 # Optional: but keep a template for others
 !.env.example
+
+*.pyc
