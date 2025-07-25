@@ -5,22 +5,99 @@
 
 {% block content %}
 <div class="container py-5">
-    <!-- Section Header -->
-    <h2 class="text-primary mb-4 text-center">AI Recommendation</h2>
 
-    <!-- Recommendation Message -->
-    <div class="alert alert-success shadow-sm rounded">
-        <strong>Preliminary Result:</strong> Based on your answers, your symptoms appear to be mild.  
-        Please apply gentle pressure to the area and contact the office tomorrow if it continues.
-    </div>
+    {% if request.user.is_authenticated and request.user.is_superuser %}
+        <!-- ADMIN VIEW -->
+        <h2 class="text-danger mb-4 text-center">Admin Dashboard - Patient Summary</h2>
 
-    <p class="text-muted text-center">
-        If symptoms worsen, we will connect you to the on-call doctor immediately.
-    </p>
+        {% if summary %}
+            <div class="card shadow-sm mb-4 border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">Conversation Summary</h5>
+                    <ul class="list-group list-group-flush mb-3">
+                        <li class="list-group-item">
+                            <strong>Caller Name:</strong> {{ summary.caller_name|default:"Not provided" }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Caller Number:</strong> {{ summary.contact_number|default:"Not provided" }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Concern:</strong> {{ summary.concern|default:"Not specified" }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Severity:</strong> {{ summary.severity|default:"Undetermined" }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Findings:</strong><br>
+                            <pre class="text-muted">{{ summary.initial_findings|default:"No findings available." }}</pre>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Call ID:</strong> {{ summary.call_id }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Timestamp:</strong> {{ summary.timestamp|date:"Y-m-d H:i" }}
+                        </li>
+                    </ul>
 
-    <!-- Action Button -->
-    <div class="text-center mt-4">
-        <a href="{% url 'home' %}" class="btn btn-outline-secondary">Back to Home</a>
-    </div>
+                    <!-- FULL TRANSCRIPT -->
+                    <h6 class="text-secondary mt-4 mb-2">Full Conversation Transcript</h6>
+                    <div class="bg-light border rounded p-3" style="max-height: 400px; overflow-y: auto; white-space: pre-wrap;">
+                        {% if transcript %}
+                            {{ transcript }}
+                        {% else %}
+                            <span class="text-muted">No transcript available for this call.</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-warning text-center">
+                No summary data available for this call.
+            </div>
+        {% endif %}
+
+        <div class="text-center mt-4">
+            <a href="{% url 'assessment' %}" class="btn btn-outline-danger">Go to Assessment Panel</a>
+        </div>
+
+    {% else %}
+        <!-- GUEST VIEW (unchanged) -->
+        <h2 class="text-primary mb-4 text-center">PerioCare AI Agent Summary</h2>
+
+        {% if summary %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-3 text-secondary">Patient Summary</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>Caller Name:</strong> {{ summary.caller_name|default:"Not provided" }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Main Concern:</strong> {{ summary.concern|default:"Not specified" }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Severity:</strong> {{ summary.severity|default:"Undetermined" }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Initial Findings:</strong><br>
+                            <span class="text-muted">{{ summary.initial_findings|default:"No findings available." }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-warning text-center">
+                No summary data available.
+            </div>
+        {% endif %}
+
+        <p class="text-muted text-center">
+            If symptoms worsen, we will connect you to the on-call doctor immediately.
+        </p>
+
+        <div class="text-center mt-4">
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary">Back to Home</a>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

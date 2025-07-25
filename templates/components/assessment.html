@@ -1,68 +1,157 @@
 {% extends "base/index.html" %}
 {% load static %}
 
-{% block title %}Call Log - PerioCare AI{% endblock %}
+{% block title %}Admin Panel - Call Assessments | PerioCare AI{% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <!-- Page Header -->
-    <h2 class="text-primary text-center mb-4">Call Log</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary mb-0">Call Assessment Log</h2>
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary">Back to Home</a>
+    </div>
 
     <!-- Call Log Table -->
-    <div class="table-responsive shadow-sm rounded">
-        <table class="table table-bordered table-hover align-middle">
-            <thead class="table-light">
+    <div class="table-responsive shadow rounded">
+        <table class="table table-hover table-bordered align-middle">
+            <thead class="table-primary text-center">
                 <tr>
-                    <th scope="col">Call ID</th>
-                    <th scope="col">Caller Name</th>
-                    <th scope="col">Call Time</th>
-                    <th scope="col">Caller Number</th>
-                    <th scope="col">Concern</th>
-                    <th scope="col">Severity</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Details</th>
+                    <th>Call ID</th>
+                    <th>Caller Name</th>
+                    <th>Call Time</th>
+                    <th>Caller Number</th>
+                    <th>Main Concern</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
-                <tbody>
+            <tbody class="text-center">
+                {% if call_logs %}
                     {% for log in call_logs %}
                     <tr>
-                        <td>{{ log.call_id }}</td>
-                        <td>{{ log.caller_name }}</td>
-                        <td>{{ log.call_time }}</td>
-                        <td>{{ log.caller_number }}</td>
-                        <td>{{ log.assessment.concern }}</td>
+                        <td><code>{{ log.call_id }}</code></td>
+                        <td>{{ log.caller_name|default:"Anonymous" }}</td>
+                        <td>{{ log.call_time|date:"Y-m-d H:i" }}</td>
+                        <td>{{ log.caller_number|default:"Unknown" }}</td>
+                        <td>{{ log.assessment.concern|default:"—" }}</td>
                         <td>
-                            <span class="badge 
-                                {% if log.assessment.severity == 'Mild' %}bg-success
-                                {% elif log.assessment.severity == 'Moderate' %}bg-warning text-dark
-                                {% else %}bg-danger
-                                {% endif %}">
-                                {{ log.assessment.severity }}
-                            </span>
+                            {% if log.assessment.severity %}
+                                <span class="badge rounded-pill 
+                                    {% if log.assessment.severity == 'Mild' %}bg-success
+                                    {% elif log.assessment.severity == 'Moderate' %}bg-warning text-dark
+                                    {% else %}bg-danger
+                                    {% endif %}">
+                                    {{ log.assessment.severity }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">Not Set</span>
+                            {% endif %}
                         </td>
                         <td>
-                            <span class="{% if log.assessment.status == 'Resolved' %}text-success
-                                        {% elif log.assessment.status == 'Escalated' %}text-danger
-                                        {% elif log.assessment.status == 'Pending' %}text-warning
-                                        {% elif log.assessment.status == 'In Progress' %}text-info
-                                        {% elif log.assessment.status == 'Cancelled' %}text-secondary
-                                        {% else %}text-muted
-                                        {% endif %}">
-                                {{ log.assessment.status }}
-                            </span>
+                            {% if log.assessment %}
+                            <div class="status-cell" data-call-id="{{ log.call_id }}">
+                                <span class="badge d-inline-block cursor-pointer status-display
+                                    {% if log.assessment.status == 'Resolved' %}bg-success
+                                    {% elif log.assessment.status == 'Escalated' %}bg-danger
+                                    {% elif log.assessment.status == 'Pending' %}bg-warning text-dark
+                                    {% elif log.assessment.status == 'In Progress' %}bg-info
+                                    {% elif log.assessment.status == 'Cancelled' %}bg-secondary
+                                    {% else %}bg-light text-dark
+                                    {% endif %}">
+                                    {{ log.assessment.status }}
+                                </span>
+                                <select class="form-select form-select-sm status-dropdown d-none mt-1">
+                                    {% for option in status_options %}
+                                        <option value="{{ option }}" {% if log.assessment.status == option %}selected{% endif %}>
+                                            {{ option }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% else %}
+                                <span class="text-muted">Uncomplete Call</span>
+                            {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'summary' call_id=log.call_id %}" class="btn btn-sm btn-outline-primary">View</a>
+                            <a href="{% url 'response' call_id=log.call_id %}" class="btn btn-sm btn-outline-primary">
+                                View
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
-                </tbody>
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-5">
+                            No call logs available yet.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
         </table>
     </div>
 
-    <!-- Navigation -->
-    <div class="text-center mt-4">
-        <a href="{% url 'home' %}" class="btn btn-outline-secondary">Back to Home</a>
-    </div>
 </div>
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .d-none { display: none !important; }
+</style>
+
+<script>
+document.querySelectorAll('.status-cell').forEach(cell => {
+    const badge = cell.querySelector('.status-display');
+    const dropdown = cell.querySelector('.status-dropdown');
+    const callId = cell.dataset.callId;
+
+    badge.addEventListener('click', () => {
+        badge.classList.add('d-none');
+        dropdown.classList.remove('d-none');
+    });
+
+    dropdown.addEventListener('change', () => {
+        const newStatus = dropdown.value;
+
+        fetch(`/backend/update_status/${callId}/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Update badge text and class
+                badge.textContent = newStatus;
+
+                badge.className = 'badge d-inline-block cursor-pointer status-display';
+                switch (newStatus) {
+                    case 'Resolved': badge.classList.add('bg-success'); break;
+                    case 'Escalated': badge.classList.add('bg-danger'); break;
+                    case 'Pending': badge.classList.add('bg-warning', 'text-dark'); break;
+                    case 'In Progress': badge.classList.add('bg-info'); break;
+                    case 'Cancelled': badge.classList.add('bg-secondary'); break;
+                    default: badge.classList.add('bg-light', 'text-dark');
+                }
+
+                dropdown.classList.add('d-none');
+                badge.classList.remove('d-none');
+            } else {
+                alert("Failed to update status");
+            }
+        })
+        .catch(err => {
+            console.error("Error:", err);
+            alert("An error occurred while updating status.");
+        });
+    });
+
+    dropdown.addEventListener('blur', () => {
+        dropdown.classList.add('d-none');
+        badge.classList.remove('d-none');
+    });
+});
+</script>
 {% endblock %}

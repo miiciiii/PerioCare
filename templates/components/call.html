@@ -3,18 +3,14 @@
 {% block content %}
 
 <div class="container py-5 text-center text-dark">
-  <!-- Call Header -->
   <h4 class="mb-2">On Call with <span class="text-info">AI Assistant</span></h4>
   <small id="call-timer" class="mb-4 d-block text-muted">Call Duration: 00:00</small>
 
-  <!-- Soundwave Animation -->
   <div class="soundwave" id="soundwave">
-    <!-- Pulsing Rings -->
     <span class="ring"></span>
     <span class="ring"></span>
     <span class="ring"></span>
 
-    <!-- Central Spikes -->
     <div class="spike-container">
       <div class="spike"></div>
       <div class="spike"></div>
@@ -26,19 +22,15 @@
 
   <div id="ai-status" class="text-info mb-4">Listening...</div>
 
-    <!-- Chat Display -->
-    <div id="chat-container" class="bg-white text-dark rounded shadow-sm p-3 mx-auto mb-4"
-        style="max-width: 600px; height: 250px; overflow-y: auto;">
+  <div id="chat-container" class="bg-white text-dark rounded shadow-sm p-3 mx-auto mb-4"
+       style="max-width: 600px; height: 250px; overflow-y: auto;">
     <div id="chat-body" class="d-flex flex-column gap-2"></div>
-    </div>
+  </div>
 
-
-  <!-- Chat Mode Button -->
   <a href="{% url 'chat' %}" class="btn btn-outline-dark">Switch to Chat Mode</a>
-  
-    <!-- Finish Button -->
+
   <div class="text-center mt-4">
-    <a href="{% url 'response' %}" class="btn btn-outline-dark">Finish Call</a>
+    <button id="endCallButton" class="btn btn-outline-dark">Finish Call</button>
   </div>
 </div>
 
@@ -50,6 +42,14 @@ const aiStatus = document.getElementById('ai-status');
 let recognition;
 let isSpeaking = false;
 let shouldListen = true;
+let fullTranscript = "";
+
+let messages = [];
+
+// Store call_id if not set
+if (!localStorage.getItem("call_id")) {
+    localStorage.setItem("call_id", "{{ call_id|default:'0' }}");
+}
 
 function setupRecognition() {
     recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -61,34 +61,39 @@ function setupRecognition() {
         aiStatus.textContent = "Listening...";
     };
 
-    recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript.trim();
-    appendMessage(transcript, 'user');
+    recognition.onresult = event => {
+        const transcript = event.results[0][0].transcript.trim();
 
-    fetch("{% url 'openai_api' %}", {
-        method: "POST",
-        headers: {
-        "X-CSRFToken": "{{ csrf_token }}",
-        "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-        messages: [
-            { role: "user", content: transcript }
-        ]
+        const lastAIMessage = messages.slice().reverse().find(m => m.role === "assistant");
+        const lastAIText = lastAIMessage ? lastAIMessage.content : "";
+
+        appendMessage(transcript, 'user');
+        messages.push({ role: "user", content: transcript });
+
+        fetch("{% url 'openai_api' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ messages: messages })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        const aiReply = data.response || "AI did not respond.";
-        appendMessage(aiReply, 'ai');
-        speak(aiReply);
-    })
-    .catch(error => {
-        console.error("Voice fetch error:", error);
-    });
+        .then(response => response.json())
+        .then(data => {
+            const aiReply = data.response || "AI did not respond.";
+            const isFallback = data.is_fallback || false;
+
+            appendMessage(aiReply, 'ai');
+            messages.push({ role: "assistant", content: aiReply });
+
+            speak(aiReply, isFallback);
+        })
+        .catch(error => {
+            console.error("Voice fetch error:", error);
+        });
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = event => {
         console.warn("Speech recognition error:", event.error);
         if (shouldListen && !isSpeaking) restartRecognition();
     };
@@ -98,53 +103,65 @@ function setupRecognition() {
     };
 }
 
+
 function startRecognition() {
     if (!recognition) setupRecognition();
-    try {
-        recognition.start();
-    } catch (e) {
-        console.warn("Recognition start error:", e.message);
-    }
+    try { recognition.start(); }
+    catch (e) { console.warn("Recognition start error:", e.message); }
 }
 
 function stopRecognition() {
     if (recognition) {
-        try {
-            recognition.stop();
-        } catch (e) {
-            console.warn("Recognition stop error:", e.message);
-        }
+        try { recognition.stop(); }
+        catch (e) { console.warn("Recognition stop error:", e.message); }
     }
 }
 
-function restartRecognition(delay = 500) {
+function restartRecognition(delay = 2000) {
     setTimeout(() => {
-        if (!isSpeaking && shouldListen) {
-            startRecognition();
-        }
+        if (!isSpeaking && shouldListen) startRecognition();
     }, delay);
 }
 
-function speak(text) {
+function speak(text, isFallback = false) {
     stopRecognition();
     isSpeaking = true;
-    const synth = window.speechSynthesis;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-
     aiStatus.textContent = "AI is speaking...";
     soundwave.style.animationPlayState = 'running';
 
-    synth.cancel(); // in case previous speech is still running
-    synth.speak(utterance);
+    const synth = window.speechSynthesis;
+    synth.cancel();
 
-    utterance.onend = () => {
+    const speakText = (message) => {
+        return new Promise(resolve => {
+            const utterance = new SpeechSynthesisUtterance(message);
+            utterance.lang = 'en-US';
+            utterance.onend = resolve;
+            synth.speak(utterance);
+        });
+    };
+
+    // Speak AI reply
+    speakText(text)
+    .then(() => {
+        if (isFallback) {
+            const prompt = "For better assistance, we recommend switching to Chat Mode. Do you want to switch now?";
+            return speakText(prompt).then(() => {
+                const confirmed = confirm(prompt);
+                if (confirmed) {
+                    window.location.href = "{% url 'chat' %}";
+                }
+            });
+        }
+    })
+    .finally(() => {
         isSpeaking = false;
         soundwave.style.animationPlayState = 'paused';
         aiStatus.textContent = "Listening...";
-        restartRecognition(800);
-    };
+        restartRecognition(1000); // ← safe delay to ensure echo clears
+    });
 }
+
 
 function appendMessage(text, sender) {
     const msg = document.createElement('div');
@@ -156,6 +173,7 @@ function appendMessage(text, sender) {
         </span>`;
     chatBox.appendChild(msg);
     chatBox.scrollTop = chatBox.scrollHeight;
+    fullTranscript += `${sender === 'user' ? 'You' : 'AI'}: ${text}\n`;
 }
 
 function startCallTimer() {
@@ -169,15 +187,60 @@ function startCallTimer() {
     }, 1000);
 }
 
+document.getElementById("endCallButton").addEventListener("click", function () {
+    const callId = localStorage.getItem("call_id");
+
+    const redirectToResponse = () => {
+        if (callId && !isNaN(Number(callId))) {
+            window.location.href = `/backend/response/${callId}/`;
+        } else {
+            window.location.href = "/backend/call/";
+        }
+    };
+
+    if (!callId || !fullTranscript.trim()) {
+        localStorage.removeItem("call_id");
+        redirectToResponse();
+        return;
+    }
+
+    fetch("{% url 'save_conversation' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            call_id: callId,
+            full_transcript: fullTranscript
+        })
+    })
+    .then(() => {
+        localStorage.removeItem("call_id");
+        redirectToResponse();
+    })
+    .catch(err => {
+        console.error("Failed to save conversation:", err);
+        redirectToResponse();
+    });
+});
+
 window.onload = () => {
     soundwave.style.animationPlayState = 'paused';
     shouldListen = true;
-    setTimeout(() => {
+
+    const initialMessage = "{{ initial_message|escapejs }}";
+    if (initialMessage) {
+        appendMessage(initialMessage, 'ai');
+        speak(initialMessage);
+    } else {
         startRecognition();
-    }, 1000);
+    }
+
     startCallTimer();
 };
-</script>
 
+
+</script>
 
 {% endblock %}

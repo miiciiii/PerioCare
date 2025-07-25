@@ -44,7 +44,7 @@
 
   <!-- Finish Button -->
   <div class="text-center mt-4">
-    <a href="{% url 'response' %}" class="btn btn-outline-dark">Finish Call</a>
+    <a href="#" id="endChatButton" class="btn btn-outline-dark">End Chat</a>
   </div>
 </div>
 
@@ -54,83 +54,151 @@ const chatBox = document.getElementById('chatBox');
 const userInput = document.getElementById('userInput');
 const micButton = document.getElementById('micButton');
 const chatForm = document.getElementById('chatForm');
+const endChatButton = document.getElementById('endChatButton');
 
-// 🎤 SPEECH-TO-TEXT
+let fullTranscript = "";
+let messages = [];  // 💬 Store full message history
+
+// 📌 Ensure call_id exists in localStorage
+if (!localStorage.getItem("call_id")) {
+    localStorage.setItem("call_id", "{{ call_id|default:'0' }}");
+}
+
+// 🎤 Speech-to-text
 micButton.addEventListener('click', () => {
-  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = 'en-US';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
-  recognition.start();
+    recognition.start();
 
-  recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    userInput.value = transcript;
-  };
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        userInput.value = transcript;
+    };
 
-  recognition.onerror = (event) => {
-    alert('Speech recognition error: ' + event.error);
-  };
+    recognition.onerror = (event) => {
+        alert('Speech recognition error: ' + event.error);
+    };
 });
 
-// 📨 FORM SUBMIT
+// 📨 Form Submit
 chatForm.addEventListener('submit', function (e) {
-  e.preventDefault();
+    e.preventDefault();
 
-  const message = userInput.value.trim();
-  if (!message) return;
+    const message = userInput.value.trim();
+    if (!message) return;
 
-  // Append user's message (right side)
-  const userMsg = document.createElement('div');
-  userMsg.className = 'd-flex justify-content-end mb-2';
-  userMsg.innerHTML = `
-    <div class="bg-primary text-white p-2 rounded rounded-end text-break" style="white-space: pre-wrap; max-width: 75%;">
-      ${message}
-    </div>`;
-  chatBox.appendChild(userMsg);
-  chatBox.scrollTop = chatBox.scrollHeight;
-
-  userInput.value = '';
-
-  // Send to unified AI endpoint
-  fetch("{% url 'openai_api' %}", {
-    method: "POST",
-    headers: {
-      "X-CSRFToken": "{{ csrf_token }}",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      messages: [
-        { role: "user", content: message }
-      ]
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    const aiText = data.response || "AI did not respond.";
-
-    // Append AI message (left side)
-    const aiMsg = document.createElement('div');
-    aiMsg.className = 'd-flex align-items-start mb-2 w-100';
-    aiMsg.innerHTML = `
-      <div class="bg-success text-white p-2 rounded rounded-start text-break"
-          style="white-space: pre-wrap; max-width: 75%; text-align: left;">
-        AI: ${aiText}
-      </div>`;
-    chatBox.appendChild(aiMsg);
+    // ➕ Add user message to UI
+    const userMsg = document.createElement('div');
+    userMsg.className = 'd-flex justify-content-end mb-2';
+    userMsg.innerHTML = `
+        <div class="bg-primary text-white p-2 rounded rounded-end text-break" style="white-space: pre-wrap; max-width: 75%;">
+          ${message}
+        </div>`;
+    chatBox.appendChild(userMsg);
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    // 🔊 Text-to-speech
-    const synth = window.speechSynthesis;
-    const utterance = new SpeechSynthesisUtterance(aiText);
-    utterance.lang = 'en-US';
-    synth.speak(utterance);
-  })
-  .catch(error => {
-    console.error("Fetch error:", error);
-  });
+    fullTranscript += `You: ${message}\n\n`;
+    messages.push({ role: "user", content: message });  // ➕ Track user message
+    userInput.value = '';
 
+    fetch("{% url 'openai_api' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ messages: messages })  // ✅ Send full history
+    })
+    .then(response => response.json())
+    .then(data => {
+        const aiText = data.response;
+
+        // ➕ Add AI main reply
+        const aiMsg = document.createElement('div');
+        aiMsg.className = 'd-flex align-items-start mb-2 w-100';
+        aiMsg.innerHTML = `
+            <div class="bg-success text-white p-2 rounded rounded-start text-break"
+                style="white-space: pre-wrap; max-width: 75%; text-align: left;">
+              AI: ${aiText}
+            </div>`;
+        chatBox.appendChild(aiMsg);
+        fullTranscript += `AI: ${aiText}\n\n`;
+        messages.push({ role: "assistant", content: aiText });  // ✅ Track AI reply
+
+        let combinedSpeech = aiText;
+
+        // ➕ Add follow-up if present
+        if (data.follow_up) {
+            const followUpMsg = document.createElement('div');
+            followUpMsg.className = 'd-flex align-items-start mb-2 w-100';
+            followUpMsg.innerHTML = `
+                <div class="bg-warning text-dark p-2 rounded rounded-start text-break"
+                    style="white-space: pre-wrap; max-width: 75%; text-align: left;">
+                  AI (follow-up): ${data.follow_up}
+                </div>`;
+            chatBox.appendChild(followUpMsg);
+            fullTranscript += `AI (follow-up): ${data.follow_up}\n\n`;
+
+            messages.push({ role: "assistant", content: data.follow_up });  // ✅ Track follow-up
+            combinedSpeech += `. ${data.follow_up}`;
+        }
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const utterance = new SpeechSynthesisUtterance(combinedSpeech);
+        utterance.lang = 'en-US';
+        window.speechSynthesis.speak(utterance);
+    })
+    .catch(error => {
+        console.error("Fetch error:", error);
+    });
+});
+
+// 🛑 End Chat Button
+endChatButton.addEventListener('click', function (e) {
+    e.preventDefault();
+
+    const callId = localStorage.getItem("call_id");
+
+    const responseUrlTemplate = "{% url 'response' 0 %}";
+    const redirectToResponse = () => {
+        if (callId && !isNaN(Number(callId))) {
+            const url = responseUrlTemplate.replace("/0/", `/${callId}/`);
+            window.location.href = url;
+        } else {
+            window.location.href = "/backend/call/";
+        }
+    };
+
+    if (!callId || !fullTranscript.trim()) {
+        localStorage.removeItem("call_id");
+        redirectToResponse();
+        return;
+    }
+
+    fetch("{% url 'save_conversation' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            call_id: callId,
+            full_transcript: fullTranscript
+        })
+    })
+    .then(() => {
+        localStorage.removeItem("call_id");
+        redirectToResponse();
+    })
+    .catch(err => {
+        console.error("Failed to save conversation:", err);
+        redirectToResponse();
+    });
 });
 </script>
+
 {% endblock %}
