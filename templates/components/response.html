@@ -32,10 +32,10 @@
                             <pre class="text-muted">{{ summary.initial_findings|default:"No findings available." }}</pre>
                         </li>
                         <li class="list-group-item">
-                            <strong>Call ID:</strong> {{ summary.call_id }}
+                            <strong>Call ID:</strong> {{ call_id }}
                         </li>
                         <li class="list-group-item">
-                            <strong>Timestamp:</strong> {{ summary.timestamp|date:"Y-m-d H:i" }}
+                            <strong>Timestamp:</strong> {{ summary.timestamp|date:"Y-m-d H:i"|default:"Not Available" }}
                         </li>
                     </ul>
 

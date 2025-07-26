@@ -35,16 +35,21 @@ def openai_api(request):
         if not messages or not isinstance(messages, list):
             return JsonResponse({"error": "Message history is required as a list"}, status=400)
 
-        # Insert system prompt if missing
         if not messages[0].get("role") == "system":
             messages.insert(0, {
                 "role": "system",
                 "content": (
-                    "You are a warm, professional AI medical assistant who responds to patients recovering from surgery. "
-                    "Use a compassionate, reassuring tone. Ask thoughtful follow-up questions to understand the patient's condition "
-                    "(such as severity, patient name, and concern). Also, kindly ask for the patient's full name and contact number "
-                    "to keep their records up to date. Keep each response concise (no more than 10 words) to maintain a natural conversation flow. "
-                    "If symptoms seem serious or urgent, calmly advise the patient to contact their doctor or emergency services immediately."
+                    "You are a warm, professional AI medical assistant helping patients recovering from surgery. "
+                    "Start by greeting the patient and acknowledging their message with compassion. "
+                    "Then, **before discussing symptoms**, kindly ask for their **full name** and **contact number**. "
+                    "Use natural language like: 'I'm here to help — may I have your full name and contact number first?' "
+                    "Only after receiving both the name and contact number should you ask about symptoms, concerns, and severity. "
+                    "If they share a symptom first (like fever or pain), express empathy but immediately follow with: "
+                    "'I understand — before we continue, could you please share your full name and contact number?' "
+                    "Maintain a caring, human tone at all times. Avoid sounding robotic or overly scripted. "
+                    "Once details are collected, ask clear follow-ups about the patient's condition and severity. "
+                    "If symptoms suggest urgency (fever >39°C, severe pain, difficulty breathing), reassure the patient and state that you'll alert the on-call doctor immediately. "
+                    "Keep all responses short (under 12 words) and emotionally supportive."
                 )
             })
 
@@ -69,7 +74,8 @@ def openai_api(request):
             fallback_questions = {
                 "name": "May I ask your full name?",
                 "contact": "Could you share your contact number?",
-                "concern": "What concern or symptom are you experiencing?"
+                "concern": "What concern or symptom are you experiencing?",
+                "severity": "How severe is your condition? (mild, moderate, severe)"
             }
 
         # Step 1: Rebuild state from message history
@@ -148,8 +154,10 @@ def summarize_conversation(request):
                     {
                         "role": "system",
                         "content": (
-                            "You are a helpful assistant. Summarize this chat into JSON using these exact keys: "
-                            "caller_name, concern, severity, initial_findings, contact_number."
+                            "You are a helpful assistant. Summarize this chat into JSON with these keys: "
+                            "caller_name, concern, severity, initial_findings, contact_number. "
+                            "If the user provides their name, include it. Same for other fields. "
+                            "Output ONLY valid JSON with double quotes."
                         )
                     },
                     {"role": "user", "content": full_transcript}
@@ -157,19 +165,21 @@ def summarize_conversation(request):
                 temperature=0.7,
                 max_tokens=512
             )
+
             summary_text = response.choices[0].message.content.strip()
+            print("🔍 Raw OpenAI response:", summary_text)
 
             try:
-                summary = json.loads(summary_text.replace("'", '"'))
+                summary = json.loads(summary_text)
             except json.JSONDecodeError:
-                print("⚠️ OpenAI returned invalid JSON.")
+                print("⚠️ Invalid JSON from OpenAI. Using empty dict.")
                 summary = {}
 
         except Exception as openai_error:
             print("🚫 OpenAI API failed:", str(openai_error))
             summary = {}
 
-        # --- Rule-based fallback from chat-style transcript ---
+        # --- Rule-based fallback ---
         fallback_answers = {
             "caller_name": None,
             "contact_number": None,
@@ -181,7 +191,8 @@ def summarize_conversation(request):
         followup_keywords = {
             "caller_name": "full name",
             "contact_number": "contact number",
-            "concern": "concern"  # or "symptom"
+            "concern": "concern",
+            "severity": "severity",
         }
 
         lines = full_transcript.lower().splitlines()
@@ -201,14 +212,14 @@ def summarize_conversation(request):
                 answer = line.replace("you:", "").strip()
                 if answer:
                     fallback_answers[current_field] = answer
-                current_field = None  # reset
+                current_field = None
 
         # Fill summary fields if missing
         for key, val in fallback_answers.items():
             if not summary.get(key):
                 summary[key] = val
 
-        print("🔧 Final summary (OpenAI + fallback):", summary)
+        print("🔧 Final summary:", summary)
 
         # --- Save to DB ---
         if call_id:
@@ -216,14 +227,19 @@ def summarize_conversation(request):
                 call_log = CallLog.objects.get(call_id=call_id)
                 assessment, _ = Assessment.objects.get_or_create(call_log=call_log)
 
+                # ✅ Always update if data exists, even partial
                 if summary.get("caller_name"):
                     call_log.caller_name = summary["caller_name"]
+                if summary.get("contact_number"):
                     call_log.caller_number = summary["contact_number"]
-                    call_log.save()
+                call_log.save()
 
-                assessment.concern = summary.get("concern") or assessment.concern
-                assessment.severity = summary.get("severity") or assessment.severity
-                assessment.initial_findings = summary.get("initial_findings") or assessment.initial_findings
+                if summary.get("concern"):
+                    assessment.concern = summary["concern"]
+                if summary.get("severity"):
+                    assessment.severity = summary["severity"]
+                if summary.get("initial_findings"):
+                    assessment.initial_findings = summary["initial_findings"]
                 assessment.save()
 
                 print("✅ Data saved to DB.")
@@ -234,8 +250,9 @@ def summarize_conversation(request):
         return JsonResponse(summary)
 
     except Exception as e:
-        print("🔥 Top-level error in summarize_conversation:", str(e))
+        print("🔥 Top-level error:", str(e))
         return JsonResponse({"error": str(e)}, status=500)
+
 
 
 

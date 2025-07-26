@@ -17,6 +17,7 @@ urlpatterns = [
     path('call/', views.call, name='call'),
     path('chat/', views.chat, name='chat'),
     path('assessment/', views.assessment, name='assessment'),
+    path('response/details/<int:call_id>', views.response_view, name='response_view'),
     path('response/<int:call_id>/', views.response, name='response'),
     path('update_status/<int:call_id>/', views.update_status, name='update_status'),
 

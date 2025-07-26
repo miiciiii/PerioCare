@@ -84,7 +84,7 @@ def response(request, call_id):
                 api_url,
                 headers={'Content-Type': 'application/json'},
                 data=json.dumps({
-                    'call_id': call_id,  # include for DB update
+                    'call_id': call_id,
                     'full_transcript': conversation.full_transcript
                 })
             )
@@ -98,10 +98,31 @@ def response(request, call_id):
             summary = {"error": str(e)}
     
     return render(request, 'components/response.html', {
-        'call_log': call_log,
         'summary': summary,
+        'call_id': call_id,
         'transcript': conversation.full_transcript if conversation else None,
     })
+
+def response_view(request, call_id):
+    call_log = get_object_or_404(CallLog, call_id=call_id)
+    conversation = call_log.conversations.last()
+    assessment = getattr(call_log, 'assessment', None)
+
+    summary = {
+        "caller_name": call_log.caller_name if call_log.caller_name else None,
+        "contact_number": call_log.caller_number if call_log.caller_number else None,
+        "concern": assessment.concern if assessment else None,
+        "severity": assessment.severity if assessment else None,
+        "initial_findings": assessment.initial_findings if assessment else None,
+        "timestamp": conversation.timestamp if conversation else None,
+    }
+    
+    return render(request, 'components/response.html', {
+        'summary': summary,
+        'call_id': call_id,
+        'transcript': conversation.full_transcript if conversation else None,
+    })
+
 
 
 
