@@ -17,10 +17,11 @@ urlpatterns = [
     path('call/', views.call, name='call'),
     path('chat/', views.chat, name='chat'),
     path('assessment/', views.assessment, name='assessment'),
-    path('response/', views.response, name='response'),
-    path('summary/<int:call_id>/', views.summary, name='summary'),
+    path('response/details/<int:call_id>', views.response_view, name='response_view'),
+    path('response/<int:call_id>/', views.response, name='response'),
+    path('update_status/<int:call_id>/', views.update_status, name='update_status'),
 
-    # AI response endpoint
+    path("save-conversation/", views.save_conversation, name="save_conversation"),
 
-    path('ai_response/', views.ai_response, name='ai_response'),
+
     ]

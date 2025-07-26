@@ -22,6 +22,7 @@ class Assessment(models.Model):
     concern = models.TextField()
     severity = models.CharField(max_length=50)
     status = models.CharField(max_length=50, default='Pending')
+    initial_findings = models.TextField(blank=True, null=True)
 
     call_log = models.OneToOneField(CallLog, on_delete=models.CASCADE, related_name='assessment')
 
@@ -33,12 +34,12 @@ class Conversation(models.Model):
     Model to store conversation history.
     """
     call_log = models.ForeignKey(CallLog, on_delete=models.CASCADE, related_name='conversations')
-    user_input = models.TextField()
-    ai_response = models.TextField()
+    full_transcript = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Conversation for {self.call_log.caller_name} at {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+
 
     
 
