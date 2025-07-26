@@ -1,0 +1,17 @@
+# Ignore the main .env file
+.env
+
+# Ignore any file ending with .env (e.g., dev.env, staging.env)
+*.env
+
+# Optional: but keep a template for others
+!.env.example
+
+*.pyc
+
+__pycache__/
+*.pyc
+db.sqlite3
+*.sqlite3
+
+
